@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken"
 
 const prisma = new PrismaClient({errorFormat: "minimal"});
 
-const authentication = async (req: Request, res: Response) => {
+const login = async (req: Request, res: Response) => {
     try {
         const {username, password} = req.body
 
@@ -32,6 +32,7 @@ const authentication = async (req: Request, res: Response) => {
         }
 
         const payload = {
+            id: findUser.id,
             username: findUser.username,
             role: findUser.role
         }
@@ -94,4 +95,4 @@ const register = async (req: Request, res: Response) => {
     }
 }
 
-export { authentication, register };
+export { login, register };

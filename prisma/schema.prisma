@@ -10,13 +10,14 @@ generator client {
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model users {
   id        Int      @id @default(autoincrement())
   username  String   @unique @default("")
   password  String   @default("")
-  role      Role
+  role      Role     @default(siswa)
   siswa     siswa[]
   stan      stan[]
   createdAt DateTime @default(now())
