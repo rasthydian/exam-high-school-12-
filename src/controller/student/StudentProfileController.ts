@@ -250,4 +250,10 @@ const deleteSiswa = async (req: Request, res: Response) => {
     }
 };
 
-export { createSiswa, getAllSiswa, getSiswaById, updateSiswa, deleteSiswa };
+export { 
+    createSiswa, 
+    getAllSiswa, 
+    getSiswaById, 
+    updateSiswa, 
+    deleteSiswa
+};

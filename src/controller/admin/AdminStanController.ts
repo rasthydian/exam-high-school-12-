@@ -201,4 +201,10 @@ const deleteStan = async (req: Request, res: Response) => {
     }
 };
 
-export { createStan, getAllStan, getStanById, updateStan, deleteStan };
+export { 
+    createStan, 
+    getAllStan, 
+    getStanById, 
+    updateStan, 
+    deleteStan
+};
