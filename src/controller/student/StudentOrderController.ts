@@ -82,9 +82,11 @@ const createOrder = async (req: Request, res: Response) => {
             }
 
             let finalPrice = menu.harga;
+            const now = new Date();
 
-            // Apply discount if provided
+            // Apply discount if provided or auto-apply best available discount
             if (item.id_diskon) {
+                // Use specified discount
                 const diskon = await prisma.diskon.findUnique({
                     where: { id: item.id_diskon }
                 });
@@ -96,7 +98,6 @@ const createOrder = async (req: Request, res: Response) => {
                 }
 
                 // Check if discount is active
-                const now = new Date();
                 if (now < diskon.tanggal_awal || now > diskon.tanggal_akhir) {
                     return res.status(400).json({
                         message: `Diskon ${diskon.nama_diskon} is not active`
@@ -118,7 +119,24 @@ const createOrder = async (req: Request, res: Response) => {
                 }
 
                 // Calculate discounted price
-                finalPrice = menu.harga * (1 - diskon.persentase_diskon / 100);
+                finalPrice = Math.round(menu.harga * (1 - diskon.persentase_diskon / 100));
+            } else {
+                // Auto-apply best available discount
+                const activeDiscounts = (menu as any).menu_diskon
+                    .filter((md: any) => {
+                        const diskon = md.diskon;
+                        return diskon && diskon.tanggal_awal <= now && diskon.tanggal_akhir >= now;
+                    })
+                    .map((md: any) => md.diskon);
+
+                if (activeDiscounts.length > 0) {
+                    // Find the highest discount
+                    const maxDiskon = activeDiscounts.reduce((max: any, current: any) => 
+                        current.persentase_diskon > max.persentase_diskon ? current : max
+                    );
+                    // Calculate discounted price with best discount
+                    finalPrice = Math.round(menu.harga * (1 - maxDiskon.persentase_diskon / 100));
+                }
             }
 
             orderDetails.push({

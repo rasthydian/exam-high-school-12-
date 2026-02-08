@@ -41,15 +41,38 @@ const getAllMenuForSiswa = async (req: Request, res: Response) => {
                 })
                 .map((md: any) => md.diskon);
 
+            // Calculate discounted price if there are active discounts
+            let hargaSetelahDiskon = null;
+            let diskonAktif = null;
+            let hemat = null;
+            
+            if (activeDiscounts.length > 0) {
+                // Find the highest discount
+                const maxDiskon = activeDiscounts.reduce((max: any, current: any) => 
+                    current.persentase_diskon > max.persentase_diskon ? current : max
+                );
+                diskonAktif = {
+                    id: maxDiskon.id,
+                    nama_diskon: maxDiskon.nama_diskon,
+                    persentase_diskon: maxDiskon.persentase_diskon
+                };
+                hargaSetelahDiskon = Math.round(menu.harga * (1 - maxDiskon.persentase_diskon / 100));
+                hemat = menu.harga - hargaSetelahDiskon;
+            }
+
             return {
                 id: menu.id,
                 nama_masakan: menu.nama_masakan,
-                harga: menu.harga,
+                harga_asli: menu.harga,
+                harga_setelah_diskon: hargaSetelahDiskon,
+                harga_final: hargaSetelahDiskon || menu.harga,
+                hemat: hemat,
+                diskon_aktif: diskonAktif,
                 jenis: menu.jenis,
                 foto: menu.foto,
                 deskripsi: menu.deskripsi,
                 stan: menu.stan,
-                diskon_tersedia: activeDiscounts
+                ada_diskon: activeDiscounts.length > 0
             };
         });
 
@@ -103,15 +126,38 @@ const getMenuByIdForSiswa = async (req: Request, res: Response) => {
             })
             .map((md: any) => md.diskon);
 
+        // Calculate discounted price if there are active discounts
+        let hargaSetelahDiskon = null;
+        let diskonAktif = null;
+        let hemat = null;
+        
+        if (activeDiscounts.length > 0) {
+            // Find the highest discount
+            const maxDiskon = activeDiscounts.reduce((max: any, current: any) => 
+                current.persentase_diskon > max.persentase_diskon ? current : max
+            );
+            diskonAktif = {
+                id: maxDiskon.id,
+                nama_diskon: maxDiskon.nama_diskon,
+                persentase_diskon: maxDiskon.persentase_diskon
+            };
+            hargaSetelahDiskon = Math.round(menu.harga * (1 - maxDiskon.persentase_diskon / 100));
+            hemat = menu.harga - hargaSetelahDiskon;
+        }
+
         const menuWithDiskon = {
             id: menu.id,
             nama_masakan: menu.nama_masakan,
-            harga: menu.harga,
+            harga_asli: menu.harga,
+            harga_setelah_diskon: hargaSetelahDiskon,
+            harga_final: hargaSetelahDiskon || menu.harga,
+            hemat: hemat,
+            diskon_aktif: diskonAktif,
             jenis: menu.jenis,
             foto: menu.foto,
             deskripsi: menu.deskripsi,
             stan: menu.stan,
-            diskon_tersedia: activeDiscounts
+            ada_diskon: activeDiscounts.length > 0
         };
 
         return res.status(200).json({

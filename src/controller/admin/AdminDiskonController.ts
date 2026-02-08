@@ -106,9 +106,25 @@ const createDiskonPerMenu = async (req: Request, res: Response) => {
             }
         });
 
+        // Enhance with calculated prices
+        const now = new Date();
+        const isActive = result!.tanggal_awal <= now && result!.tanggal_akhir >= now;
+        const menusWithDiscount = result!.menu_diskon.map(md => ({
+            ...md.menu,
+            harga_asli: md.menu.harga,
+            harga_setelah_diskon: Math.round(md.menu.harga * (1 - newDiskon.persentase_diskon / 100)),
+            hemat: Math.round(md.menu.harga * (newDiskon.persentase_diskon / 100))
+        }));
+
         return res.status(201).json({
             message: "Diskon created and assigned to menu successfully",
-            data: result
+            data: {
+                ...result,
+                is_active: isActive,
+                status: isActive ? 'AKTIF' : (now < result!.tanggal_awal ? 'BELUM AKTIF' : 'EXPIRED'),
+                menus: menusWithDiscount,
+                total_menu: menusWithDiscount.length
+            }
         });
     } catch (error) {
         console.log(error);
@@ -138,9 +154,29 @@ const getAllDiskon = async (req: Request, res: Response) => {
             }
         });
 
+        // Enhance diskons with calculated prices
+        const now = new Date();
+        const diskonsWithPrices = diskons.map(diskon => {
+            const isActive = diskon.tanggal_awal <= now && diskon.tanggal_akhir >= now;
+            const menusWithDiscount = diskon.menu_diskon.map(md => ({
+                ...md.menu,
+                harga_asli: md.menu.harga,
+                harga_setelah_diskon: Math.round(md.menu.harga * (1 - diskon.persentase_diskon / 100)),
+                hemat: Math.round(md.menu.harga * (diskon.persentase_diskon / 100))
+            }));
+
+            return {
+                ...diskon,
+                is_active: isActive,
+                status: isActive ? 'AKTIF' : (now < diskon.tanggal_awal ? 'BELUM AKTIF' : 'EXPIRED'),
+                menus: menusWithDiscount,
+                total_menu: menusWithDiscount.length
+            };
+        });
+
         return res.status(200).json({
             message: "Success get all diskon",
-            data: diskons
+            data: diskonsWithPrices
         });
     } catch (error) {
         console.log(error);
@@ -181,9 +217,27 @@ const getDiskonById = async (req: Request, res: Response) => {
             });
         }
 
+        // Enhance with calculated prices
+        const now = new Date();
+        const isActive = diskon.tanggal_awal <= now && diskon.tanggal_akhir >= now;
+        const menusWithDiscount = diskon.menu_diskon.map(md => ({
+            ...md.menu,
+            harga_asli: md.menu.harga,
+            harga_setelah_diskon: Math.round(md.menu.harga * (1 - diskon.persentase_diskon / 100)),
+            hemat: Math.round(md.menu.harga * (diskon.persentase_diskon / 100))
+        }));
+
+        const diskonWithPrices = {
+            ...diskon,
+            is_active: isActive,
+            status: isActive ? 'AKTIF' : (now < diskon.tanggal_awal ? 'BELUM AKTIF' : 'EXPIRED'),
+            menus: menusWithDiscount,
+            total_menu: menusWithDiscount.length
+        };
+
         return res.status(200).json({
             message: "Success get diskon",
-            data: diskon
+            data: diskonWithPrices
         });
     } catch (error) {
         console.log(error);
@@ -355,9 +409,25 @@ const assignDiskonToMenu = async (req: Request, res: Response) => {
             }
         });
 
+        // Enhance with calculated prices
+        const now = new Date();
+        const isActive = result!.tanggal_awal <= now && result!.tanggal_akhir >= now;
+        const menusWithDiscount = result!.menu_diskon.map(md => ({
+            ...md.menu,
+            harga_asli: md.menu.harga,
+            harga_setelah_diskon: Math.round(md.menu.harga * (1 - result!.persentase_diskon / 100)),
+            hemat: Math.round(md.menu.harga * (result!.persentase_diskon / 100))
+        }));
+
         return res.status(200).json({
             message: "Diskon assigned to menu successfully",
-            data: result
+            data: {
+                ...result,
+                is_active: isActive,
+                status: isActive ? 'AKTIF' : (now < result!.tanggal_awal ? 'BELUM AKTIF' : 'EXPIRED'),
+                menus: menusWithDiscount,
+                total_menu: menusWithDiscount.length
+            }
         });
     } catch (error) {
         console.log(error);
@@ -462,9 +532,27 @@ const getActiveDiskon = async (req: Request, res: Response) => {
             }
         });
 
+        // Enhance diskons with calculated prices
+        const diskonsWithPrices = diskons.map(diskon => {
+            const menusWithDiscount = diskon.menu_diskon.map(md => ({
+                ...md.menu,
+                harga_asli: md.menu.harga,
+                harga_setelah_diskon: Math.round(md.menu.harga * (1 - diskon.persentase_diskon / 100)),
+                hemat: Math.round(md.menu.harga * (diskon.persentase_diskon / 100))
+            }));
+
+            return {
+                ...diskon,
+                is_active: true,
+                status: 'AKTIF',
+                menus: menusWithDiscount,
+                total_menu: menusWithDiscount.length
+            };
+        });
+
         return res.status(200).json({
             message: "Success get active diskon",
-            data: diskons
+            data: diskonsWithPrices
         });
     } catch (error) {
         console.log(error);

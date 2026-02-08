@@ -113,13 +113,57 @@ const getMenuByStan = async (req: Request, res: Response) => {
                         nama_stan: true,
                         nama_pemilik: true
                     }
+                },
+                menu_diskon: {
+                    include: {
+                        diskon: true
+                    }
                 }
             }
         });
 
+        // Transform data to include active discounts
+        const now = new Date();
+        const menusWithDiskon = menus.map((menu: any) => {
+            const activeDiscounts = menu.menu_diskon
+                .filter((md: any) => {
+                    const diskon = md.diskon;
+                    return diskon && diskon.tanggal_awal <= now && diskon.tanggal_akhir >= now;
+                })
+                .map((md: any) => md.diskon);
+
+            // Calculate discounted price if there are active discounts
+            let hargaSetelahDiskon = null;
+            let diskonAktif = null;
+            let hemat = null;
+            
+            if (activeDiscounts.length > 0) {
+                const maxDiskon = activeDiscounts.reduce((max: any, current: any) => 
+                    current.persentase_diskon > max.persentase_diskon ? current : max
+                );
+                diskonAktif = {
+                    id: maxDiskon.id,
+                    nama_diskon: maxDiskon.nama_diskon,
+                    persentase_diskon: maxDiskon.persentase_diskon
+                };
+                hargaSetelahDiskon = Math.round(menu.harga * (1 - maxDiskon.persentase_diskon / 100));
+                hemat = menu.harga - hargaSetelahDiskon;
+            }
+
+            return {
+                ...menu,
+                harga_asli: menu.harga,
+                harga_setelah_diskon: hargaSetelahDiskon,
+                harga_final: hargaSetelahDiskon || menu.harga,
+                hemat: hemat,
+                diskon_aktif: diskonAktif,
+                ada_diskon: activeDiscounts.length > 0
+            };
+        });
+
         return res.status(200).json({
             message: "Success get menu by stan",
-            data: menus
+            data: menusWithDiskon
         });
     } catch (error) {
         console.log(error);
@@ -143,6 +187,11 @@ const getMenuById = async (req: Request, res: Response) => {
                         nama_stan: true,
                         nama_pemilik: true
                     }
+                },
+                menu_diskon: {
+                    include: {
+                        diskon: true
+                    }
                 }
             }
         });
@@ -153,9 +202,45 @@ const getMenuById = async (req: Request, res: Response) => {
             });
         }
 
+        // Calculate active discounts
+        const now = new Date();
+        const activeDiscounts = (menu as any).menu_diskon
+            .filter((md: any) => {
+                const diskon = md.diskon;
+                return diskon && diskon.tanggal_awal <= now && diskon.tanggal_akhir >= now;
+            })
+            .map((md: any) => md.diskon);
+
+        let hargaSetelahDiskon = null;
+        let diskonAktif = null;
+        let hemat = null;
+        
+        if (activeDiscounts.length > 0) {
+            const maxDiskon = activeDiscounts.reduce((max: any, current: any) => 
+                current.persentase_diskon > max.persentase_diskon ? current : max
+            );
+            diskonAktif = {
+                id: maxDiskon.id,
+                nama_diskon: maxDiskon.nama_diskon,
+                persentase_diskon: maxDiskon.persentase_diskon
+            };
+            hargaSetelahDiskon = Math.round(menu.harga * (1 - maxDiskon.persentase_diskon / 100));
+            hemat = menu.harga - hargaSetelahDiskon;
+        }
+
+        const menuWithDiskon = {
+            ...menu,
+            harga_asli: menu.harga,
+            harga_setelah_diskon: hargaSetelahDiskon,
+            harga_final: hargaSetelahDiskon || menu.harga,
+            hemat: hemat,
+            diskon_aktif: diskonAktif,
+            ada_diskon: activeDiscounts.length > 0
+        };
+
         return res.status(200).json({
             message: "Success get menu",
-            data: menu
+            data: menuWithDiskon
         });
     } catch (error) {
         console.log(error);
