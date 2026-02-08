@@ -630,31 +630,270 @@ const printOrderReceipt = async (req: Request, res: Response) => {
             };
         });
 
-        // Format receipt data
-        const receipt = {
-            nota: {
-                no_transaksi: order.id,
-                tanggal: order.tanggal,
-                status: order.status
-            },
-            stan: {
-                nama_stan: order.stan.nama_stan,
-                nama_pemilik: order.stan.nama_pemilik,
-                telp: order.stan.telp
-            },
-            pembeli: {
-                nama: order.siswa.nama_siswa,
-                alamat: order.siswa.alamat,
-                telp: order.siswa.telp
-            },
-            items: items,
-            total_harga: totalHarga
+        // Generate HTML Receipt
+        const formatRupiah = (amount: number) => {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(amount);
         };
 
-        return res.status(200).json({
-            message: "Receipt data retrieved successfully",
-            data: receipt
-        });
+        const formatDate = (date: Date) => {
+            return new Intl.DateTimeFormat('id-ID', {
+                dateStyle: 'full',
+                timeStyle: 'short'
+            }).format(new Date(date));
+        };
+
+        const statusLabel: Record<string, string> = {
+            'belum_dikonfirm': 'Belum Dikonfirmasi',
+            'dimasak': 'Sedang Dimasak',
+            'diantar': 'Sedang Diantar',
+            'sampai': 'Pesanan Sampai'
+        };
+
+        const statusColor: Record<string, string> = {
+            'belum_dikonfirm': '#ffc107',
+            'dimasak': '#2196F3',
+            'diantar': '#ff9800',
+            'sampai': '#4CAF50'
+        };
+
+        const itemsHTML = items.map((item, index) => `
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">${index + 1}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
+                    ${item.nama_menu}
+                    <span style="display: block; font-size: 12px; color: #666; margin-top: 4px;">
+                        (${item.jenis})
+                    </span>
+                </td>
+                <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right;">${formatRupiah(item.harga_satuan)}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: center;">${item.qty}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right; font-weight: 600;">${formatRupiah(item.subtotal)}</td>
+            </tr>
+        `).join('');
+
+        const htmlReceipt = `
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nota Pemesanan #${order.id}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .receipt-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .receipt-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .receipt-header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .receipt-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .receipt-body {
+            padding: 30px;
+        }
+        .info-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            gap: 20px;
+        }
+        .info-box {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .info-box h3 {
+            color: #667eea;
+            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+        .info-box p {
+            color: #333;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 5px 0;
+        }
+        .info-box .label {
+            color: #666;
+            font-size: 12px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        thead th {
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        .total-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .total-section .label {
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .total-section .amount {
+            font-size: 32px;
+            font-weight: 700;
+        }
+        .receipt-footer {
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            color: #666;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        .receipt-footer strong {
+            color: #333;
+            display: block;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+        @media print {
+            body { background: white; padding: 0; }
+            .receipt-container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <div class="receipt-header">
+            <h1>🧾 NOTA PEMESANAN</h1>
+            <p>No. Transaksi: #${order.id}</p>
+        </div>
+        
+        <div class="receipt-body">
+            <div class="info-section">
+                <div class="info-box">
+                    <h3>📍 Informasi Stan</h3>
+                    <p><strong>${order.stan.nama_stan}</strong></p>
+                    <p class="label">Pemilik</p>
+                    <p>${order.stan.nama_pemilik}</p>
+                    <p class="label">Telepon</p>
+                    <p>${order.stan.telp || '-'}</p>
+                </div>
+                
+                <div class="info-box">
+                    <h3>👤 Informasi Pembeli</h3>
+                    <p><strong>${order.siswa.nama_siswa}</strong></p>
+                    <p class="label">Alamat</p>
+                    <p>${order.siswa.alamat || '-'}</p>
+                    <p class="label">Telepon</p>
+                    <p>${order.siswa.telp || '-'}</p>
+                </div>
+                
+                <div class="info-box">
+                    <h3>📅 Informasi Pesanan</h3>
+                    <p class="label">Tanggal</p>
+                    <p><strong>${formatDate(order.tanggal)}</strong></p>
+                    <p class="label">Status</p>
+                    <div class="status-badge" style="background-color: ${statusColor[order.status]}; color: white;">
+                        ${statusLabel[order.status]}
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="color: #667eea; margin-bottom: 15px; font-size: 18px;">🍽️ Detail Pesanan</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">No</th>
+                        <th>Nama Menu</th>
+                        <th style="text-align: right; width: 120px;">Harga</th>
+                        <th style="text-align: center; width: 80px;">Qty</th>
+                        <th style="text-align: right; width: 150px;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsHTML}
+                </tbody>
+            </table>
+            
+            <div class="total-section">
+                <span class="label">Total Pembayaran</span>
+                <span class="amount">${formatRupiah(totalHarga)}</span>
+            </div>
+        </div>
+        
+        <div class="receipt-footer">
+            <p>Terima kasih atas pesanan Anda! 🙏</p>
+            <p>Semoga makanan dan minuman yang Anda pesan dapat dinikmati dengan baik.</p>
+            <strong>Selamat Menikmati! 😊</strong>
+            <p style="margin-top: 20px; font-size: 11px; color: #999;">
+                Nota ini dicetak pada: ${formatDate(new Date())}
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        return res.status(200).send(htmlReceipt);
     } catch (error) {
         console.log(error);
         return res.status(500).json({
